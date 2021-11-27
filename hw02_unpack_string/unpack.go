@@ -7,16 +7,9 @@ import (
 	"unicode"
 )
 
-const escapeChar = '\\'
+var ErrInvalidString = errors.New("invalid string")
 
-var (
-	ErrInvalidString    = errors.New("invalid string")
-	ErrUnexpectBehavior = errors.New("unexpected behavior")
-)
-
-func isSpecial(char rune) bool {
-	return unicode.IsDigit(char) || char == escapeChar
-}
+var escapeSymbol = '\\'
 
 func repeatRune(char rune, count rune) (string, error) {
 	countInt, err := strconv.Atoi(string(count))
@@ -27,45 +20,55 @@ func repeatRune(char rune, count rune) (string, error) {
 func Unpack(input string) (string, error) {
 	var result strings.Builder
 
-	casted := []rune(input)
+	prev := rune(0)
+	escaped := false
 
-	length := len(casted)
-	for i := 0; i < length; {
-		if unicode.IsDigit(casted[i]) {
-			return "", ErrInvalidString
+	for _, symbol := range input {
+		if symbol == escapeSymbol {
+			if escaped {
+				escaped = false
+				prev = escapeSymbol
+				continue
+			} else {
+				escaped = true
+			}
 		}
 
-		if casted[i] == escapeChar { // nolint:nestif
-			if (i+1 >= length) || !isSpecial(casted[i+1]) {
+		if unicode.IsDigit(symbol) {
+			if escaped {
+				prev = symbol
+				escaped = false
+				continue
+			}
+
+			if prev == rune(0) {
 				return "", ErrInvalidString
 			}
 
-			if i+2 < length && unicode.IsDigit(casted[i+2]) {
-				str, err := repeatRune(casted[i+1], casted[i+2])
-				if err != nil {
-					panic(ErrUnexpectBehavior)
-				}
-
-				result.WriteString(str)
-				i += 3
-			} else {
-				result.WriteRune(casted[i+1])
-				i += 2
+			str, err := repeatRune(prev, symbol)
+			if err != nil {
+				return "", ErrInvalidString
 			}
-		} else {
-			if i+1 < length && unicode.IsDigit(casted[i+1]) {
-				str, err := repeatRune(casted[i], casted[i+1])
-				if err != nil {
-					panic(ErrUnexpectBehavior)
-				}
 
-				result.WriteString(str)
-				i += 2
-			} else {
-				result.WriteRune(casted[i])
-				i++
-			}
+			result.WriteString(str)
+			prev = rune(0)
+
+			continue
 		}
+
+		if prev != rune(0) {
+			result.WriteRune(prev)
+		}
+
+		prev = symbol
+	}
+
+	if escaped {
+		return "", ErrInvalidString
+	}
+
+	if prev != rune(0) {
+		result.WriteRune(prev)
 	}
 
 	return result.String(), nil
