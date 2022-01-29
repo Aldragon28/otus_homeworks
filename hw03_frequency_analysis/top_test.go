@@ -6,9 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Change to true if needed.
-var taskWithAsteriskIsCompleted = false
-
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
 	ступеньки собственным затылком:  бум-бум-бум.  Другого  способа
@@ -44,39 +41,47 @@ var text = `Как видите, он  спускается  по  лестни�
 		В этот вечер...`
 
 func TestTop10(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []string
+	}{
+		{
+			input:    text,
+			expected: []string{"а", "он", "и", "ты", "что", "в", "его", "если", "кристофер", "не"}, // 8 8 6 5 5 4 4 4 4 4
+		},
+		{
+			input:    "w1 w2 w3  w4     w5 w6 w7 w8 w9 w10",
+			expected: []string{"w1", "w10", "w2", "w3", "w4", "w5", "w6", "w7", "w8", "w9"},
+		},
+		{
+			input:    "w - -    -- - - w w w w w w w w w",
+			expected: []string{"w"},
+		},
+		{
+			input:    "w!a",
+			expected: []string{"w!a"},
+		},
+		{
+			input:    "!w!a!",
+			expected: []string{"w!a"},
+		},
+		{
+			input:    "w!!!!!!",
+			expected: []string{"w"},
+		},
+	}
+
 	t.Run("no words in empty string", func(t *testing.T) {
 		require.Len(t, Top10(""), 0)
 	})
 
 	t.Run("positive test", func(t *testing.T) {
-		if taskWithAsteriskIsCompleted {
-			expected := []string{
-				"а",         // 8
-				"он",        // 8
-				"и",         // 6
-				"ты",        // 5
-				"что",       // 5
-				"в",         // 4
-				"его",       // 4
-				"если",      // 4
-				"кристофер", // 4
-				"не",        // 4
-			}
-			require.Equal(t, expected, Top10(text))
-		} else {
-			expected := []string{
-				"он",        // 8
-				"а",         // 6
-				"и",         // 6
-				"ты",        // 5
-				"что",       // 5
-				"-",         // 4
-				"Кристофер", // 4
-				"если",      // 4
-				"не",        // 4
-				"то",        // 4
-			}
-			require.Equal(t, expected, Top10(text))
+		for _, tc := range tests {
+			tc := tc
+			t.Run(tc.input, func(t *testing.T) {
+				result := Top10(tc.input)
+				require.Equal(t, tc.expected, result)
+			})
 		}
 	})
 }
